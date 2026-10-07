@@ -2,10 +2,19 @@
 import Link from "next/link";
 import { useState } from "react";
 import { timeLeft, useNow, useStore } from "@/components/useStore";
+import { getLedgerAddress, signOnLedger, SPECULOS_URL, transport } from "@/lib/ledger-client";
 import { PREDICATES, type AccessRequest } from "@/lib/types";
 
+// Make sure the vault is paired with this browser's Ledger before signing.
+async function pair() {
+  const address = transport === "simulated" ? undefined : await getLedgerAddress();
+  const res = await fetch("/api/pair", { method: "POST", body: JSON.stringify({ address }) });
+  if (!res.ok) throw new Error((await res.json()).error);
+}
+
 export default function PatientVault() {
-  const { requests, grants, audit, refresh } = useStore();
+  const { patientAddress, requests, grants, audit, refresh } = useStore();
+  const [pairing, setPairing] = useState<string | null>(null);
   const now = useNow();
   const pending = requests.filter((r) => r.status === "pending");
 
@@ -18,6 +27,27 @@ export default function PatientVault() {
         </div>
         <Link href="/clinic" className="text-sm underline">Open clinic view →</Link>
       </header>
+
+      <section className="rounded-xl border border-neutral-200 dark:border-neutral-800 p-4 flex flex-wrap items-center justify-between gap-3 text-sm">
+        <div>
+          <p className="font-medium">Ledger {transport === "speculos" ? "(emulator)" : transport === "simulated" ? "(simulated)" : ""}</p>
+          <p className="text-neutral-500 break-all">{patientAddress ? `Paired: ${patientAddress}` : pairing ?? "Not connected"}</p>
+        </div>
+        <div className="flex gap-3 items-center">
+          {transport === "speculos" && (
+            <a href={SPECULOS_URL} target="_blank" rel="noreferrer" className="underline">Open device screen ↗</a>
+          )}
+          {!patientAddress && (
+            <button
+              onClick={async () => {
+                setPairing("Connecting…");
+                try { await pair(); setPairing(null); refresh(); } catch (e) { setPairing(`Couldn't connect: ${(e as Error).message}`); }
+              }}
+              className="rounded-md bg-black text-white dark:bg-white dark:text-black px-4 py-2"
+            >Connect Ledger</button>
+          )}
+        </div>
+      </section>
 
       <section className="space-y-3">
         <h2 className="font-medium">Access requests</h2>
@@ -55,12 +85,33 @@ export default function PatientVault() {
 }
 
 function RequestCard({ request: r, onDone }: { request: AccessRequest; onDone: () => void }) {
-  const [busy, setBusy] = useState(false);
-  const act = async (action: "approve" | "deny") => {
-    setBusy(true);
-    await fetch(`/api/requests/${r.id}/${action}`, { method: "POST", body: "{}" });
-    setBusy(false);
+  const [status, setStatus] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const busy = status !== null;
+
+  const deny = async () => {
+    await fetch(`/api/requests/${r.id}/deny`, { method: "POST" });
     onDone();
+  };
+  const approve = async () => {
+    setError(null);
+    try {
+      setStatus("Connecting to Ledger…");
+      await pair();
+      let body = {};
+      if (transport !== "simulated") {
+        const consent = await (await fetch(`/api/requests/${r.id}/consent`)).json();
+        setStatus("Review the consent on your Ledger, then hold to sign…");
+        body = { signature: await signOnLedger(consent.message), expiresAt: consent.expiresAt };
+      }
+      const res = await fetch(`/api/requests/${r.id}/approve`, { method: "POST", body: JSON.stringify(body) });
+      if (!res.ok) throw new Error((await res.json()).error);
+      onDone();
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setStatus(null);
+    }
   };
   const notShared = r.requestedFields.filter((f) => !r.plan.fields.includes(f));
 
@@ -76,7 +127,7 @@ function RequestCard({ request: r, onDone }: { request: AccessRequest; onDone: (
         {notShared.length > 0 && <p className="text-neutral-500">Withheld: {notShared.join(", ")}</p>}
       </div>
 
-      {/* Mirrors what the Ledger shows for the EIP-712 consent message */}
+      {/* Preview of the consent text the Ledger will display */}
       <div className="mx-auto max-w-xs rounded-lg bg-black text-white font-mono text-xs p-4 space-y-1">
         <p className="text-center text-neutral-400 pb-1">Ledger: review consent</p>
         <p>Verifier: {r.verifier}</p>
@@ -86,11 +137,13 @@ function RequestCard({ request: r, onDone }: { request: AccessRequest; onDone: (
       </div>
 
       <div className="flex gap-2 justify-center">
-        <button disabled={busy} onClick={() => act("deny")} className="rounded-md border px-4 py-2 text-sm">Reject</button>
-        <button disabled={busy} onClick={() => act("approve")} className="rounded-md bg-black text-white dark:bg-white dark:text-black px-4 py-2 text-sm">
-          {busy ? "Confirm on Ledger…" : "Approve on Ledger"}
+        <button disabled={busy} onClick={deny} className="rounded-md border px-4 py-2 text-sm">Reject</button>
+        <button disabled={busy} onClick={approve} className="rounded-md bg-black text-white dark:bg-white dark:text-black px-4 py-2 text-sm">
+          {busy ? "Waiting for Ledger…" : "Approve on Ledger"}
         </button>
       </div>
+      {status && <p className="text-center text-sm text-neutral-500">{status}</p>}
+      {error && <p className="text-center text-sm text-red-600">{error}</p>}
     </div>
   );
 }

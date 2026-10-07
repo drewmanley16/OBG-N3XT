@@ -19,9 +19,10 @@ There are two ways to share:
 
 ```
 clinic ──request──► AI agent ──minimal plan──► patient's Ledger ──signed consent──► time-limited grant
-"we need your        "a pharmacy only           "Share: medications                  clinic sees only
- full record"         needs meds + a             Prove: penicillin allergy            what was approved,
-                      penicillin yes/no"         For: 15 min   ✓ / ✗"                 then access ends
+"we need your        "a pharmacy only           "Verifier: Campus Pharmacy           clinic sees only
+ full record"         needs meds + a             Share: medications                  what was approved,
+                      penicillin yes/no"         Prove: penicillin allergy           then access ends
+                                                 Hold to sign"
 ```
 
 **What "temporary" really means:** a grant controls access through our system. Once someone has *seen* raw data, they could copy it. That's why the agent prefers proving facts over sharing records, and falls back to raw data only when a provider genuinely needs it.
@@ -30,30 +31,43 @@ clinic ──request──► AI agent ──minimal plan──► patient's Led
 
 | Ledger tool | Role | Status |
 |---|---|---|
-| **Signer, via DMK Ethereum Signer Kit + EIP-712** | The consent is an EIP-712 message, so the Ledger shows a readable verifier, the data to share, the facts to prove, and an expiry. The server verifies the signature before creating a grant. | Simulated with a dev key (`src/lib/consent.ts`) |
-| **Ring CLI (Ledger Key Ring)** | Encrypts the patient's records at rest with Ledger-backed keys | TODO (`src/lib/vault.ts`) |
+| **Signer, via Ledger Device Management Kit (DMK) + Ethereum Signer Kit** | The browser sends the consent text to the patient's Ledger, which shows every line (verifier, data to share, facts to prove, expiry). The patient holds to sign. The server rebuilds the text, recovers the signer, and only creates a grant if it's the vault's paired Ledger. | **Working**, tested on Ledger's emulator |
+| **Speculos (Ledger's official emulator)** | Runs the real Ledger Flex firmware and Ethereum app in Docker, so we can build and demo without hardware. The same code talks to a real device over USB (`NEXT_PUBLIC_LEDGER_TRANSPORT=webhid`). | Working |
+| **Ring CLI (Ledger Key Ring)** | Would encrypt the records at rest with Ledger-backed keys. Setup (`ring init`) requires a physical device. | Blocked without hardware |
 | **Agent Stack / Agent Intent** | "Agents propose, humans approve, the Ledger signer enforces." This is exactly our flow. | Framing and pitch |
-| **Multisig** *(stretch)* | Emergency break-glass: unlocking records for an unconscious patient needs a proxy's and a doctor's Ledger, and the patient is notified afterward | Idea |
+| **Multisig** *(stretch)* | Emergency break-glass: unlocking records for an unconscious patient needs a proxy's and a doctor's Ledger | Idea |
+
+**Why plain text and not EIP-712?** The Ledger Ethereum app (1.22) only shows typed data readably when Ledger has an ERC-7730 descriptor for it. Without one, it demands "blind signing", the opposite of what we're pitching. A plain-text `personal_sign` message is shown in full on the device. A registered ERC-7730 descriptor is the production path.
 
 ## Run it
 
+Requirements: Node 22+ and Docker.
+
 ```bash
 npm install
+npm run speculos       # starts the Ledger emulator (Flex); device screen at http://localhost:5005
 cp .env.example .env   # optional: add ANTHROPIC_API_KEY; without it the agent uses built-in rules
 npm run dev
 ```
 
-Open http://localhost:3000/clinic in one tab and http://localhost:3000 (the patient view) in another. Send a request from the clinic, approve it as the patient, then click **View** in the clinic tab.
+1. Open http://localhost:3000/clinic and send a request (try **Campus Pharmacy**).
+2. Open http://localhost:3000 (the patient view) and click **Approve on Ledger**.
+3. On the device screen (http://localhost:5005), swipe through the consent and **hold to sign**.
+4. Back in the clinic tab, click **View**. You'll see only what was approved, until it expires.
+
+No Docker? Set `NEXT_PUBLIC_LEDGER_TRANSPORT=simulated` in `.env` and the server signs with a dev key instead. A real Ledger over USB uses `webhid` (Chrome or Edge).
 
 ## Code map
 
 | Path | What it does |
 |---|---|
 | `src/lib/agent.ts` | AI agent (Claude) that turns a request into a minimal disclosure plan, preferring yes/no proofs. It can never exceed what was asked for. |
-| `src/lib/consent.ts` | The EIP-712 consent message, signature verification, and a simulated Ledger signer |
+| `src/lib/consent.ts` | The consent text the Ledger displays, and signature recovery |
+| `src/lib/ledger-client.ts` | Browser side: DMK connects to the emulator or a USB Ledger, then gets the address and signs |
+| `scripts/speculos.sh` | Downloads Ledger's Ethereum app and runs the emulator in Docker |
 | `src/lib/vault.ts` | Loads the record, picks the approved fields, and evaluates yes/no facts |
 | `src/lib/store.ts` | In-memory requests, grants and audit log |
-| `src/app/api/*` | `POST /requests`, `POST /requests/:id/approve` and `POST /requests/:id/deny`, `GET /grants/:id` (only before expiry), `GET /state` |
+| `src/app/api/*` | `POST /pair`, `POST /requests`, `GET /requests/:id/consent`, `POST /requests/:id/approve` and `POST /requests/:id/deny`, `GET /grants/:id` (only before expiry), `GET /state` |
 | `src/app/page.tsx` | Patient vault: pending requests with a preview of the Ledger screen, active access with countdowns, audit log |
 | `src/app/clinic/page.tsx` | Provider view: send requests and view what was granted |
 | `data/patient.json` | Fictional sample patient |
@@ -66,8 +80,9 @@ Open problems from the paper to cover in the pitch: revocation without linkabili
 
 ## TODO
 
-- [ ] **Real Ledger signing:** DMK + Ethereum Signer Kit `signTypedData` in the browser, posting `{ address, signature, expiresAt }` to `/approve`
-- [ ] **Ring:** encrypt `data/patient.json` with `wallet-cli ring encrypt` and decrypt on read
+- [x] Ledger signing of consent via DMK (emulator; the same code works for a USB device)
+- [ ] Make pairing itself a signed message, and persist it
+- [ ] **Ring:** encrypt `data/patient.json` with `wallet-cli ring encrypt` (needs a physical device for `ring init`)
 - [ ] **BBS proofs** for the yes/no facts
 - [ ] Issuer flow: a clinic signs the credential into the vault
 - [ ] Persist the store, plus a record upload where Claude parses a lab PDF or vaccine card into fields

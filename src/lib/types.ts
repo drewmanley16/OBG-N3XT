@@ -53,7 +53,7 @@ export interface Grant {
 
 export interface AuditEntry {
   at: string;
-  event: "requested" | "approved" | "denied" | "accessed" | "expired_access";
+  event: "paired" | "requested" | "approved" | "denied" | "accessed" | "expired_access";
   verifier: string;
   detail: string;
 }

@@ -6,12 +6,19 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "speculos": "bash scripts/speculos.sh",
+    "speculos:stop": "docker rm -f speculos"
   },
   "dependencies": {
+    "@ledgerhq/device-management-kit": "^1.11.0",
+    "@ledgerhq/device-signer-kit-ethereum": "^1.18.1",
+    "@ledgerhq/device-transport-kit-speculos": "^1.2.1",
+    "@ledgerhq/device-transport-kit-web-hid": "^1.2.4",
     "next": "16.4.0",
     "react": "19.3.0",
     "react-dom": "19.3.0",
+    "rxjs": "^7.8.2",
     "viem": "^2.57.3"
   },
   "devDependencies": {

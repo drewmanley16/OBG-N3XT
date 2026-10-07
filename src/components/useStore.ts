@@ -1,12 +1,13 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
 import type { AccessRequest, AuditEntry, Grant } from "@/lib/types";
+import type { Hex } from "viem";
 
-export type State = { requests: AccessRequest[]; grants: Grant[]; audit: AuditEntry[] };
+export type State = { patientAddress: Hex | null; requests: AccessRequest[]; grants: Grant[]; audit: AuditEntry[] };
 
 // Poll the demo store so the patient and clinic tabs stay in sync.
 export function useStore() {
-  const [state, setState] = useState<State>({ requests: [], grants: [], audit: [] });
+  const [state, setState] = useState<State>({ patientAddress: null, requests: [], grants: [], audit: [] });
   const refresh = useCallback(async () => {
     const res = await fetch("/api/state", { cache: "no-store" });
     if (res.ok) setState(await res.json());

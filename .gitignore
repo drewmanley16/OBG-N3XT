@@ -42,3 +42,7 @@ next-env.d.ts
 .env
 
 !.env.example
+
+# Ledger emulator app binaries (downloaded by scripts/speculos.sh)
+/speculos/
+.gstack/
