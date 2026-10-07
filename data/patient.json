@@ -1,0 +1,15 @@
+{
+  "name": "Jordan Rivera",
+  "dob": "2004-03-14",
+  "blood_type": "O+",
+  "allergies": ["Penicillin (hives)", "Peanuts (anaphylaxis)"],
+  "medications": ["Albuterol inhaler, as needed", "Sertraline 50mg daily"],
+  "conditions": ["Mild asthma", "Generalized anxiety disorder"],
+  "immunizations": [
+    { "vaccine": "COVID-19 (Pfizer)", "date": "2025-10-01" },
+    { "vaccine": "COVID-19 (Pfizer)", "date": "2026-09-20" },
+    { "vaccine": "Influenza", "date": "2026-09-20" },
+    { "vaccine": "Tdap", "date": "2022-08-15" }
+  ],
+  "lab_results": [{ "test": "HIV screen", "result": "Negative", "date": "2026-02-02" }]
+}
