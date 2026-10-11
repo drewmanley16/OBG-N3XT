@@ -13,6 +13,8 @@ struct OBGVaultApp: App {
                     .tabItem { Label("Provider", systemImage: "stethoscope") }
             }
             .environment(store)
+            .tint(Theme.accent)
+            .preferredColorScheme(.dark)
         }
     }
 }

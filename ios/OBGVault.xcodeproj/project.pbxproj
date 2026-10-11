@@ -18,6 +18,7 @@
 		9D90270D35233FE2B923E165 /* Verifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA47AE3B2BFF6F84068251B5 /* Verifier.swift */; };
 		9E5B4EBCBF3055C9F5955FFA /* Claims.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8BB38B04900CDF7B2362B4AB /* Claims.swift */; };
 		B9FF82C1EBB7A9B0782CCD3B /* OBGVaultApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = F84A2BD6E8786EEFA8313C2E /* OBGVaultApp.swift */; };
+		DC000F3C34E920E559A3535C /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 57B2694AFD23A8551CBE92A6 /* Theme.swift */; };
 		E1E1C370BD0DD863103F2FC2 /* WalletView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7879D5B88086A3D797E5D0E6 /* WalletView.swift */; };
 		F678A6560379BCCCBC3A17DA /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 82920359455AE2F63CF31C85 /* Models.swift */; };
 		F8814658C0A66FBB18A01117 /* LedgerSigner.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB6D003EFA124095CF117941 /* LedgerSigner.swift */; };
@@ -45,6 +46,7 @@
 		2A07821AE0E8CDFC529D5A66 /* Ethereum.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Ethereum.swift; sourceTree = "<group>"; };
 		32739238081E45512F5F8251 /* CryptoTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CryptoTests.swift; sourceTree = "<group>"; };
 		525DAB1226016AF8212A69C5 /* OBGVaultTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = OBGVaultTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		57B2694AFD23A8551CBE92A6 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
 		5B96A3912F22179B0BE1EA1A /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		5B9DC21F634AFB7995F47E16 /* ProviderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProviderView.swift; sourceTree = "<group>"; };
 		7879D5B88086A3D797E5D0E6 /* WalletView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WalletView.swift; sourceTree = "<group>"; };
@@ -80,6 +82,7 @@
 				5B96A3912F22179B0BE1EA1A /* Info.plist */,
 				8B8E324853176812DA1D5591 /* App */,
 				40EC620BE248CCF820767770 /* Crypto */,
+				4BA472D15195B2250BD7FBC9 /* Design */,
 				3E4DA2EF039B0FD1B86E997C /* Ledger */,
 				39F33728864C0342F2FAB075 /* Models */,
 				32860CE4122CE49FDD074FB8 /* Store */,
@@ -140,6 +143,14 @@
 				7879D5B88086A3D797E5D0E6 /* WalletView.swift */,
 			);
 			path = Views;
+			sourceTree = "<group>";
+		};
+		4BA472D15195B2250BD7FBC9 /* Design */ = {
+			isa = PBXGroup;
+			children = (
+				57B2694AFD23A8551CBE92A6 /* Theme.swift */,
+			);
+			path = Design;
 			sourceTree = "<group>";
 		};
 		8B8E324853176812DA1D5591 /* App */ = {
@@ -304,6 +315,7 @@
 				B9FF82C1EBB7A9B0782CCD3B /* OBGVaultApp.swift in Sources */,
 				98ECD095C404FA99A98CCE10 /* ProofEngine.swift in Sources */,
 				9583A5A16A22BA7461C86778 /* ProviderView.swift in Sources */,
+				DC000F3C34E920E559A3535C /* Theme.swift in Sources */,
 				920B8607D19966C23F225EB8 /* VaultStore.swift in Sources */,
 				9D90270D35233FE2B923E165 /* Verifier.swift in Sources */,
 				E1E1C370BD0DD863103F2FC2 /* WalletView.swift in Sources */,

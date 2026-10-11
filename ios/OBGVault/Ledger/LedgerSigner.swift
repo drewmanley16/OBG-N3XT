@@ -70,7 +70,7 @@ enum EthereumAPDU {
 /// Start it with `npm run speculos` / `scripts/speculos.sh` at the repo root.
 struct SpeculosLedger: LedgerSigner {
     var baseURL = URL(string: "http://localhost:5005")!
-    var displayName: String { "Ledger Flex (emulator)" }
+    var displayName: String { "Ledger Flex · emulator" }
 
     func address() async throws -> String {
         try EthereumAPDU.parseAddress(try await exchange(EthereumAPDU.getAddress()))
@@ -102,7 +102,7 @@ struct SpeculosLedger: LedgerSigner {
 /// No device and no Docker: signs in-app with a well-known test key. Demo only.
 struct SimulatedLedger: LedgerSigner {
     private let key = Data(hex: "59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d")!
-    var displayName: String { "Simulated Ledger (no device)" }
+    var displayName: String { "Simulated Ledger" }
 
     func address() async throws -> String { try Ethereum.address(privateKey: key) }
 

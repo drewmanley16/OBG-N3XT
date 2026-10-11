@@ -11,6 +11,7 @@ final class DemoFlowUITests: XCTestCase {
 
         app.tabBars.buttons["Provider"].tap()
         app.buttons["McDonald Theatre"].tap()
+        attach(app, "0-provider")
         app.buttons["Send request"].tap()
 
         app.tabBars.buttons["Wallet"].tap()
@@ -27,7 +28,10 @@ final class DemoFlowUITests: XCTestCase {
 
         app.tabBars.buttons["Provider"].tap()
         app.swipeUp()
-        app.buttons.containing(NSPredicate(format: "label CONTAINS 'Proof received'")).firstMatch.tap()
+        app.swipeUp()
+        let open = app.buttons["open-proof"].firstMatch
+        XCTAssertTrue(open.waitForExistence(timeout: 5))
+        open.tap()
         let verified = app.descendants(matching: .any).matching(NSPredicate(format: "label CONTAINS 'Verified'")).firstMatch
         XCTAssertTrue(verified.waitForExistence(timeout: 5))
         attach(app, "3-provider-verified")

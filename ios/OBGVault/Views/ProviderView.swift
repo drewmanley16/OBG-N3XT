@@ -10,48 +10,83 @@ struct ProviderView: View {
 
     var body: some View {
         NavigationStack {
-            Form {
-                Section {
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack {
-                            ForEach(Preset.all, id: \.verifier) { p in
-                                Button(p.verifier) { apply(p) }.buttonStyle(.bordered).font(.caption)
+            Screen(title: "Verify", subtitle: "Provider") {
+                VStack(alignment: .leading, spacing: 10) {
+                    Eyebrow("New request")
+                    Card {
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 8) {
+                                ForEach(Preset.all, id: \.verifier) { p in
+                                    let on = p.verifier == verifier
+                                    Button(p.verifier) { apply(p) }
+                                        .font(.system(size: 13, weight: .semibold))
+                                        .foregroundStyle(on ? .black : Theme.text)
+                                        .padding(.horizontal, 12).padding(.vertical, 8)
+                                        .background(on ? Theme.accent : Theme.raised, in: Capsule())
+                                        .overlay(Capsule().strokeBorder(Theme.hairline))
+                                }
                             }
                         }
-                    }
-                    TextField("Provider", text: $verifier)
-                    TextField("Reason", text: $purpose)
-                    Stepper("Access for \(minutes) min", value: $minutes, in: 1...240)
-                } header: { Text("New request") }
-
-                Section("Ask the patient to prove") {
-                    ForEach(Claim.allCases) { claim in
-                        Toggle(claim.label, isOn: Binding(
-                            get: { claims.contains(claim) },
-                            set: { if $0 { claims.insert(claim) } else { claims.remove(claim) } }))
+                        Field(label: "Provider", text: $verifier)
+                        Field(label: "Reason", text: $purpose)
                     }
                 }
 
-                Section {
+                VStack(alignment: .leading, spacing: 10) {
+                    Eyebrow("Ask the patient to prove", trailing: "\(claims.count) selected")
+                    Card(padding: 6) {
+                        ForEach(Claim.allCases) { claim in
+                            let on = claims.contains(claim)
+                            Button {
+                                if on { claims.remove(claim) } else { claims.insert(claim) }
+                            } label: {
+                                HStack(spacing: 12) {
+                                    Image(systemName: on ? "checkmark.square.fill" : "square")
+                                        .font(.system(size: 20)).foregroundStyle(on ? Theme.accent : Theme.faint)
+                                    Text(claim.label).font(.system(size: 15, weight: .medium))
+                                        .foregroundStyle(on ? Theme.text : Theme.muted)
+                                    Spacer()
+                                }
+                                .padding(10).contentShape(Rectangle())
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                }
+
+                Card {
+                    HStack {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("ACCESS WINDOW").font(Theme.mono(10, .semibold)).tracking(1.4).foregroundStyle(Theme.faint)
+                            Text("\(minutes) min").font(Theme.mono(22, .bold)).foregroundStyle(Theme.text)
+                        }
+                        Spacer()
+                        Stepper("", value: $minutes, in: 1...240).labelsHidden()
+                    }
                     Button("Send request") {
                         store.sendRequest(verifier: verifier, purpose: purpose,
                                           claims: Claim.allCases.filter(claims.contains), minutes: minutes)
                     }
+                    .buttonStyle(PrimaryButtonStyle())
                     .disabled(verifier.isEmpty || claims.isEmpty)
+                    .opacity(verifier.isEmpty || claims.isEmpty ? 0.4 : 1)
                 }
 
-                Section("Requests") {
-                    if store.requests.isEmpty { Text("None yet").foregroundStyle(.secondary) }
+                VStack(alignment: .leading, spacing: 10) {
+                    Eyebrow("Requests")
+                    if store.requests.isEmpty { Card { Text("None yet").foregroundStyle(Theme.muted) } }
                     ForEach(store.requests) { request in
                         if let grantID = request.grantID {
                             NavigationLink { VerificationView(grantID: grantID) } label: { RequestSummary(request: request) }
+                                .buttonStyle(.plain)
+                                .accessibilityIdentifier("open-proof")
                         } else {
                             RequestSummary(request: request)
                         }
                     }
                 }
             }
-            .navigationTitle("Provider")
+            .toolbar(.hidden, for: .navigationBar)
         }
     }
 
@@ -79,59 +114,111 @@ private struct Preset {
 
 private struct RequestSummary: View {
     let request: AccessRequest
+
     var body: some View {
-        VStack(alignment: .leading) {
+        Card(padding: 14) {
             HStack {
-                Text(request.verifier).bold()
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(request.verifier).font(.system(size: 16, weight: .bold)).foregroundStyle(Theme.text)
+                    Text(request.claims.map(\.label).joined(separator: " · ")).font(.caption).foregroundStyle(Theme.muted)
+                }
                 Spacer()
-                Text(request.status == .approved ? "Proof received" : request.status.rawValue.capitalized)
-                    .font(.caption).foregroundStyle(request.status == .approved ? .green : .secondary)
+                switch request.status {
+                case .approved:
+                    HStack(spacing: 6) {
+                        Pill(text: "Proof received")
+                        Image(systemName: "chevron.right").font(.system(size: 12, weight: .bold)).foregroundStyle(Theme.faint)
+                    }
+                case .pending: Pill(text: "Pending", color: Theme.warn, pulsing: true)
+                case .denied: Pill(text: "Denied", color: Theme.danger)
+                }
             }
-            Text(request.claims.map(\.label).joined(separator: ", ")).font(.caption).foregroundStyle(.secondary)
         }
     }
 }
 
 struct VerificationView: View {
     @Environment(VaultStore.self) private var store
+    @Environment(\.dismiss) private var dismiss
     let grantID: String
     @State private var result: Verification??
 
     var body: some View {
-        List {
+        Screen(title: "Proof", subtitle: "Verification") {
             switch result {
             case .none:
-                ProgressView()
+                ProgressView().tint(Theme.accent)
             case .some(.none):
-                Section { Label("Proof expired. Ask the patient again.", systemImage: "clock.badge.xmark").foregroundStyle(.red) }
+                Card {
+                    Label("Proof expired. Ask the patient again.", systemImage: "clock.badge.xmark")
+                        .font(.system(size: 16, weight: .bold)).foregroundStyle(Theme.danger)
+                }
             case let .some(.some(v)):
-                Section {
-                    Label(v.ok ? "Verified" : "Verification failed", systemImage: v.ok ? "checkmark.seal.fill" : "xmark.seal.fill")
-                        .font(.title3.bold()).foregroundStyle(v.ok ? .green : .red)
-                    ForEach(v.revealed, id: \.claim) { d in
-                        Label(d.claim.label, systemImage: d.value ? "checkmark.circle.fill" : "xmark.circle.fill")
-                            .foregroundStyle(d.value ? .green : .red)
-                    }
-                } footer: {
-                    Text("\(v.hiddenCount) other facts in the credential stayed hidden, including name and birth date.")
-                }
-                Section("Checks") {
-                    ForEach(v.checks) { c in
-                        Label(c.label, systemImage: c.ok ? "checkmark" : "xmark").foregroundStyle(c.ok ? Color.primary : .red)
-                    }
-                }
-                if let grant = store.grants.first(where: { $0.id == grantID }) {
-                    Section("What we received") {
-                        Text(grant.presentation.consentText).font(.caption.monospaced())
-                        LabeledContent("Ledger signature") {
-                            Text("0x" + grant.presentation.ledgerSignature.hex).font(.caption2.monospaced()).lineLimit(2)
+                verdict(v)
+                VStack(alignment: .leading, spacing: 10) {
+                    Eyebrow("Checks", trailing: "\(v.checks.filter(\.ok).count)/\(v.checks.count)")
+                    Card {
+                        ForEach(v.checks) { c in
+                            HStack(spacing: 12) {
+                                Check(ok: c.ok)
+                                Text(c.label).font(.system(size: 14, weight: .medium)).foregroundStyle(Theme.text)
+                            }
                         }
-                        LabeledContent("Proof engine", value: grant.presentation.engine).font(.caption)
                     }
                 }
+                if let grant = store.grants.first(where: { $0.id == grantID }) { received(grant) }
             }
         }
-        .navigationTitle("Proof")
+        .toolbar {
+            ToolbarItem(placement: .topBarLeading) {
+                Button { dismiss() } label: { Image(systemName: "chevron.left").foregroundStyle(Theme.text) }
+            }
+        }
+        .navigationBarBackButtonHidden()
         .onAppear { result = .some(store.verify(grantID: grantID)) }
+    }
+
+    private func verdict(_ v: Verification) -> some View {
+        VStack(alignment: .leading, spacing: 18) {
+            HStack(spacing: 14) {
+                Image(systemName: v.ok ? "checkmark.seal.fill" : "xmark.seal.fill")
+                    .font(.system(size: 40)).foregroundStyle(v.ok ? Theme.accent : Theme.danger)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(v.ok ? "Verified" : "Rejected").font(.system(size: 28, weight: .heavy)).foregroundStyle(Theme.text)
+                    Text("Cryptographically checked").font(Theme.mono(11)).foregroundStyle(Theme.muted)
+                }
+            }
+            ForEach(v.revealed, id: \.claim) { d in
+                HStack(spacing: 12) {
+                    Check(ok: d.value)
+                    Text(d.claim.label).font(.system(size: 17, weight: .bold)).foregroundStyle(Theme.text)
+                }
+            }
+            HStack(spacing: 8) {
+                Image(systemName: "eye.slash.fill")
+                Text("\(v.hiddenCount) other facts stayed hidden, including name and birth date")
+            }
+            .font(.caption).foregroundStyle(Theme.muted)
+        }
+        .padding(20)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background((v.ok ? Theme.accent : Theme.danger).opacity(0.08), in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 22, style: .continuous).strokeBorder((v.ok ? Theme.accent : Theme.danger).opacity(0.35)))
+    }
+
+    private func received(_ grant: Grant) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Eyebrow("Signed on Ledger")
+            VStack(alignment: .leading, spacing: 12) {
+                Text(grant.presentation.consentText).font(Theme.mono(12)).foregroundStyle(Theme.accent)
+                Rectangle().fill(Theme.hairline).frame(height: 1)
+                Text("sig 0x" + grant.presentation.ledgerSignature.hex).font(Theme.mono(10)).foregroundStyle(Theme.faint).lineLimit(3)
+                Text("engine \(grant.presentation.engine)").font(Theme.mono(10)).foregroundStyle(Theme.faint)
+            }
+            .padding(16)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Color.black, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).strokeBorder(Theme.hairline))
+        }
     }
 }
