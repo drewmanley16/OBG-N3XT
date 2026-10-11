@@ -1,59 +1,61 @@
 import XCTest
 
-/// Walks the demo: provider asks, patient approves on the Ledger, provider verifies.
-/// Needs the emulator running and someone (or a script) approving on its screen.
+/// Full demo: onboard (Ledger, Epic import, ZK proof, Ledger-signed registration),
+/// then wait for a school's request and approve it on the Ledger.
+/// Needs: scripts/speculos.sh, the web app (npm run dev in web/), someone approving
+/// on the emulator screens, and a school requesting from the portal mid-test.
 final class DemoFlowUITests: XCTestCase {
-    func testProviderRequestToVerifiedProof() throws {
-        let probe = URLSession.shared.synchronousStatus(URL(string: "http://localhost:5005/")!)
-        try XCTSkipUnless(probe == 200, "Ledger emulator not running (scripts/speculos.sh)")
+    func testOnboardThenApproveSchoolRequest() throws {
+        try XCTSkipUnless(reachable("http://localhost:5005/") && reachable("http://localhost:3000/"),
+                          "Needs the Ledger emulator and the web app running")
         let app = XCUIApplication()
+        app.launchArguments = ["-resetForUITest"]
         app.launch()
+        addUIInterruptionMonitor(withDescription: "Notifications") { alert in
+            alert.buttons["Allow"].exists ? (alert.buttons["Allow"].tap(), true).1 : false
+        }
 
-        app.tabBars.buttons["Provider"].tap()
-        app.buttons["McDonald Theatre"].tap()
-        attach(app, "0-provider")
-        app.buttons["Send request"].tap()
+        tap(app.buttons["Connect Ledger"], app)
+        tap(app.buttons["Connect Epic MyChart"], app)
+        tap(app.buttons["Generate proof"], app, timeout: 30)
+        shot(app, "1-onboarding-proof")
+        tap(app.buttons["Sign & register"], app, timeout: 30)
+        shot(app, "2-onboarding-signing")
 
-        app.tabBars.buttons["Wallet"].tap()
+        // Registered once the vault appears; then wait for the school.
+        XCTAssertTrue(app.staticTexts["ZERO-KNOWLEDGE PROOF"].waitForExistence(timeout: 120))
+        shot(app, "3-vault")
         let approve = app.buttons["Approve on Ledger"]
-        XCTAssertTrue(approve.waitForExistence(timeout: 5))
+        XCTAssertTrue(approve.waitForExistence(timeout: 240), "No school request arrived")
+        app.tap() // trigger the interruption monitor if the permission alert is up
+        shot(app, "4-request")
         approve.tap()
-        sleep(2)
-        attach(app, "1-waiting-for-ledger")
-
-        // Shared proof appears once the Ledger signs.
-        let shared = app.descendants(matching: .any).matching(NSPredicate(format: "label CONTAINS 'No provider holds a valid proof'")).firstMatch
-        XCTAssertTrue(shared.waitForNonExistence(timeout: 90))
-        attach(app, "2-wallet-after-approval")
-
-        app.tabBars.buttons["Provider"].tap()
-        app.swipeUp()
-        app.swipeUp()
-        let open = app.buttons["open-proof"].firstMatch
-        XCTAssertTrue(open.waitForExistence(timeout: 5))
-        open.tap()
-        let verified = app.descendants(matching: .any).matching(NSPredicate(format: "label CONTAINS 'Verified'")).firstMatch
-        XCTAssertTrue(verified.waitForExistence(timeout: 5))
-        attach(app, "3-provider-verified")
+        let sent = app.descendants(matching: .any).matching(NSPredicate(format: "label CONTAINS[c] 'Proof sent'")).firstMatch
+        XCTAssertTrue(sent.waitForExistence(timeout: 120))
+        shot(app, "5-sent")
     }
 
-    private func attach(_ app: XCUIApplication, _ name: String) {
+    private func tap(_ e: XCUIElement, _ app: XCUIApplication, timeout: TimeInterval = 15) {
+        XCTAssertTrue(e.waitForExistence(timeout: timeout), "Missing \(e)")
+        if !e.isHittable { app.swipeUp() }
+        e.tap()
+    }
+
+    private func shot(_ app: XCUIApplication, _ name: String) {
         let a = XCTAttachment(screenshot: app.screenshot())
         a.name = name
         a.lifetime = .keepAlways
         add(a)
     }
-}
 
-private extension URLSession {
-    func synchronousStatus(_ url: URL) -> Int? {
+    private func reachable(_ s: String) -> Bool {
         let done = DispatchSemaphore(value: 0)
-        nonisolated(unsafe) var status: Int?
-        dataTask(with: url) { _, response, _ in
-            status = (response as? HTTPURLResponse)?.statusCode
+        nonisolated(unsafe) var ok = false
+        URLSession.shared.dataTask(with: URL(string: s)!) { _, r, _ in
+            ok = (r as? HTTPURLResponse) != nil
             done.signal()
         }.resume()
         _ = done.wait(timeout: .now() + 3)
-        return status
+        return ok
     }
 }

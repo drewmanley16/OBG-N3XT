@@ -1,90 +1,83 @@
-# OBG Vault: Prove Your Vaccines, Not Your Record
+# OBG Vault: School Vaccine Proofs, Released by Ledger
 
-Our Oregon team's entry for the **Ledger N3XT hackathon**: an iPhone wallet where a patient proves vaccine facts to a provider **without handing over their medical record**, and **nothing is shared without approval on their Ledger**.
+Our Oregon team's entry for the **Ledger N3XT hackathon**. Students prove they meet school vaccine requirements with a **zero-knowledge proof**. Schools **never see the medical record**, and **nothing is released without approval on the student's Ledger**.
 
-Based on Drew Manley's paper *A Blueprint for Patient-Held Medical Credentials: Zero-Knowledge Proofs Anchored in Hardware*, written for the Ledger N3XT Research Competition.
+Based on Drew Manley's paper *A Blueprint for Patient-Held Medical Credentials: Zero-Knowledge Proofs Anchored in Hardware*.
 
-## The flow
+## How it works
 
 ```
-            request: "prove COVID-19 up to date"
-  ┌──────────────────────────────────────────────────────┐
-  │                                                      ▼
-Provider ◄── proof, limited time ── Ledger ◄── proof ── Patient's credential
-  ✗ never reads the record           "Provider: McDonald Theatre        (signed by Lane County
-                                      Prove: COVID-19 up to date          Public Health)
-                                      Reveal nothing else
-                                      Expires: 2026-10-11 22:10 UTC
-                                      Proof: 74bcf619..."  Hold to sign
+ ONBOARDING (iPhone)                                   REQUEST → RELEASE
+ ┌──────────────────────────────────────────┐          School portal (web)
+ │ 1 Connect Ledger                          │            │ signs request on SCHOOL's Ledger
+ │ 2 Import records from Epic (simulated)    │            ▼
+ │ 3 ZK proof: "meets Oregon K-12" (Noir)    │          Supabase ──Realtime──► iPhone notification
+ │ 4 Ledger signs the proof hash             │                                  │ checks school's signature
+ └───────────────┬──────────────────────────┘                                  │ student approves on THEIR Ledger
+                 ▼                                                              ▼
+ Supabase students: name · proof hash · Ledger address · signature     proof + release signature ──► School verifies 8 checks
 ```
 
-1. **Issue.** When the patient pairs their Ledger, a health department signs a vaccine credential bound to the Ledger's address. It contains COVID-19, flu, MMR, Tdap and Hep B status, plus age.
-2. **Request.** A provider (venue, university, hospital) asks the patient to prove specific facts, for a set number of minutes.
-3. **Prove.** The wallet builds a presentation that reveals only those facts. Name, birth date, dose dates and every other claim stay hidden.
-4. **Approve on Ledger.** The device shows the provider, the facts, the expiry and the proof's fingerprint. The patient holds to sign.
-5. **Verify.** The provider checks six things with only the issuer's public key: trusted issuer, proof valid against the issuer's signature, signed by the holder's Ledger, that signature covers this exact proof, credential still valid, proof not expired. After expiry, the proof is refused.
+**What the school verifies** (`web/src/app/api/verify`):
+1. The ZK proof is valid (UltraHonk, Barretenberg).
+2. It proves the Oregon K-12 dose requirements.
+3. It's bound to the student's Ledger address (a public input of the circuit).
+4. It's the same proof the student registered (its hash matches Supabase).
+5. The registration was signed on the student's Ledger.
+6. The release to this school was signed on the student's Ledger.
+7. The request was signed on the school's Ledger.
+8. The release hasn't expired.
 
-## Status
+**What the school learns:** the student meets every required dose. **What it never sees:** dose dates, exact counts, providers, lot numbers, birth date.
 
-| Piece | Status |
+## Pieces
+
+| Path | What |
 |---|---|
-| iPhone app (SwiftUI): Wallet and Provider tabs | ✅ Working |
-| Ledger signing via the Ethereum app's personal-sign command | ✅ Working on Ledger's official emulator. Readable on-device text, no blind signing. |
-| Holder binding: credential tied to the Ledger address, provider recovers the signer | ✅ Working |
-| Selective disclosure (reveal only requested facts) | ✅ Working, using salted hashes signed by the issuer |
-| **Zero-knowledge proofs (BBS)** | ⏳ Next. Plugs in behind `ProofEngine`. |
-| Real Ledger over Bluetooth (Nano X / Stax / Flex) | ⏳ Same commands (`EthereumAPDU`); needs a BLE transport |
-| Provider and patient on separate devices | ⏳ Both live in one app for the demo (`VaultStore`) |
+| `circuits/school_vaccines` | Noir circuit. Private: dose counts and a salt. Public: minimum doses and the holder's Ledger address. Returns a commitment. `nargo test` passes 3 tests. |
+| `web/` | Next.js. The **school portal** (`/`), **prover** (`/api/prove`) and **verifier** (`/api/verify`). The school signs requests on its Ledger through Ledger's Device Management Kit. |
+| `ios/` | SwiftUI student app: onboarding, Supabase Realtime requests, local notifications, and Ledger signing via raw Ethereum-app commands to the emulator. |
+| `supabase/migrations` | `students`, `schools`, `proof_requests`. Realtime is enabled on requests. RLS is wide open for the demo. |
+| `scripts/speculos*.sh` | Ledger's official emulator: the student's Ledger on :5005 and the school's on :5006 (different seeds). |
 
-**Why the current proof isn't zero-knowledge yet:** the issuer signs a salted hash of each claim, and the patient opens only the requested ones. Hidden claims really are hidden, but every presentation carries the same hashes, so providers who compare notes could link them. BBS signatures (W3C Data Integrity BBS, the scheme family in the paper) make every proof look fresh. Swap `SaltedHashEngine` for a BBS engine that implements `ProofEngine`; nothing else in the app changes. A TypeScript BBS version is on the local `web-bbs-wip` branch for reference.
+## Run the demo
 
-## Run it
-
-Requirements: Xcode 26 and Docker (for the Ledger emulator).
+Requirements: Docker, Node 22+, Xcode 26.
 
 ```bash
-scripts/speculos.sh              # Ledger Flex emulator; device screen at http://localhost:5005
-open ios/OBGVault.xcodeproj      # first build: click "Trust & Enable" for the swift-secp256k1 plugin
+scripts/speculos.sh && scripts/speculos-school.sh     # two emulated Ledgers
+cd web && cp .env.example .env.local                   # add the Supabase anon key
+npm install && npm run dev                             # school portal + prover on :3000
+cp ios/Config/Secrets.example.xcconfig ios/Config/Secrets.xcconfig   # anon key
+open ios/OBGVault.xcodeproj                            # "Trust & Enable" the secp256k1 plugin
 ```
 
-Run the **OBGVault** scheme on an iPhone simulator, then:
+1. **iPhone app:** Connect Ledger → Connect Epic MyChart → Generate proof → Sign & register. Approve on the student device at http://localhost:5005.
+2. **Portal** (http://localhost:3000): Request proof next to the student. Approve on the school device at http://localhost:5006.
+3. **iPhone:** a notification arrives. Tap **Approve on Ledger** and sign on :5005.
+4. **Portal:** **Compliant**, with all 8 checks.
 
-1. **Provider** tab: tap **McDonald Theatre**, then **Send request**.
-2. **Wallet** tab: tap **Approve on Ledger** (it pairs on first use).
-3. On the device screen (http://localhost:5005), page through with **›** and **hold** "Hold to sign". Zoom the browser out if the bottom of the device is cut off.
-4. **Provider** tab: open the request and you'll see **Verified**.
+On the emulator screens, page through with **›** and hold **Hold to sign**. In the app, the **Simulated** Ledger mode needs no Docker.
 
-No Docker? Switch the Wallet's Ledger mode to **Simulated**, which signs in-app with a test key.
+On a real iPhone, put your Mac's Wi-Fi IP in `MAC_LAN_HOST` in `Secrets.xcconfig`, sign into Xcode with the team account, and run on the device.
 
-For the demo video, put the simulator next to the emulator's device screen so viewers see the consent land on the Ledger.
+## Honest limits
+
+- The Epic import is simulated (sample records).
+- The prover runs on our server, so it sees the dose counts. In production, proving would happen on the device or at the provider.
+- Each school receives the same proof, so schools that compare notes can link it to one student. Every release is still a separate Ledger approval tied to that school and request, and it expires.
+- Realtime plus local notifications stand in for APNs push.
+- Supabase row-level security is open for the demo.
 
 ## Tests
 
-```bash
-cd ios && xcodebuild test -project OBGVault.xcodeproj -scheme OBGVault \
-  -destination 'platform=iOS Simulator,name=iPhone 17 Pro' -skipPackagePluginValidation
-```
-
-- `CryptoTests` covers: recovering the emulator's address from a real Ledger signature, splitting long messages into ≤255-byte Ledger commands, end-to-end verification, rejecting a tampered claim, rejecting an untrusted issuer, rejecting a signature from the wrong key, and keeping the consent ASCII (anything else shows as hex on the Ledger).
-- `SpeculosTests` and `DemoFlowUITests` drive the real emulator. They're skipped or fail unless it's running and someone approves on its screen.
-
-## Code map (`ios/OBGVault`)
-
-| Path | What it does |
-|---|---|
-| `Crypto/ProofEngine.swift` | **The ZK seam.** The `ProofEngine` protocol, the credential and presentation types, and today's `SaltedHashEngine` |
-| `Crypto/Verifier.swift` | The consent text shown on the Ledger, and the provider's six checks |
-| `Crypto/Ethereum.swift` | Keccak, the personal-sign digest, and recovering a signer's address (secp256k1) |
-| `Ledger/LedgerSigner.swift` | Ethereum app commands, the emulator transport over HTTP, and a simulated Ledger |
-| `Store/VaultStore.swift` | Pairing, issuing, requests, approval and grants with expiry, plus the audit log |
-| `Models/Claims.swift` | Vaccine claims and the sample patient record |
-| `Views/` | Wallet and Provider screens |
-| `project.yml` | XcodeGen spec that generated the project. Either keep using `xcodegen generate` or just edit in Xcode, but pick one. |
+- **Circuit:** `cd circuits/school_vaccines && nargo test`
+- **iOS:** `CryptoTests` covers signature recovery against a real emulator signature, Ledger message chunking, and message strings byte-for-byte identical to the web verifier. `SpeculosTests` and `DemoFlowUITests` drive the emulators and need the stack running.
 
 ## Hackathon checklist
 
-- [ ] **Submit by Oct 13, 2:59 p.m. Pacific** (11:59 p.m. Paris) via the form, with the GitHub link and demo video
-- [ ] Demo video: simulator plus the emulator's device screen
-- [ ] Slides (max 2 presenters). Position BBS as "plugging in next" behind `ProofEngine`.
+- [ ] **Submit by Oct 13, 2:59 p.m. Pacific** (11:59 p.m. Paris) with the GitHub link and demo video
+- [ ] Demo video: phone, portal and both Ledger screens
+- [ ] Slides (max 2 presenters)
 - [ ] Club account posts on X/LinkedIn tagging @Ledger with #LedgerN3XTCollab
 - [ ] Finalists announced Oct 15; pitch Oct 16, 3 p.m. Paris

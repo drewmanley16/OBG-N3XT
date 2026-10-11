@@ -1,0 +1,35 @@
+{
+  "name": "web",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint"
+  },
+  "dependencies": {
+    "@aztec/bb.js": "^5.0.0",
+    "@ledgerhq/device-management-kit": "^1.11.0",
+    "@ledgerhq/device-signer-kit-ethereum": "^1.18.1",
+    "@ledgerhq/device-transport-kit-speculos": "^1.2.1",
+    "@ledgerhq/device-transport-kit-web-hid": "^1.2.4",
+    "@noir-lang/noir_js": "^1.0.0-rc.2",
+    "@supabase/supabase-js": "^2.117.3",
+    "next": "16.4.0",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "rxjs": "^7.8.2",
+    "viem": "^2.57.4"
+  },
+  "devDependencies": {
+    "@tailwindcss/turbopack": "^4",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "16.4.0",
+    "tailwindcss": "^4",
+    "typescript": "^5"
+  }
+}

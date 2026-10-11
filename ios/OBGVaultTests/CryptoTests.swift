@@ -19,48 +19,35 @@ final class CryptoTests: XCTestCase {
         XCTAssertTrue(apdus.allSatisfy { $0.count <= 5 + 255 })
     }
 
-    func testEndToEndPresentationVerifies() async throws {
-        let (presentation, issuer, engine) = try await makePresentation()
-        let v = Verifier.verify(presentation, trustedIssuerKey: issuer.publicKey, engine: engine)
-        XCTAssertTrue(v.ok, v.checks.filter { !$0.ok }.map(\.label).joined(separator: ", "))
-        XCTAssertEqual(v.revealed.map(\.claim), [.covid19UpToDate])
-        XCTAssertEqual(v.hiddenCount, Claim.allCases.count - 1)
+    /// Must match web/src/lib/messages.ts exactly, or the school's verifier rejects the signature.
+    func testMessagesMatchWebVerifier() {
+        let hash = "e642f79bebe73ab6e80883b45a4e66c09f676a04aaaaaaaaaaaaaaaaaaaaaaaa"
+        XCTAssertEqual(Consent.registration(name: "Jordan Rivera", requirementSet: "oregon-k12-2026", proofHash: hash),
+                       "OBG Vault registration\nStudent: Jordan Rivera\nRequirements: oregon-k12-2026\nProof: e642f79bebe73ab6e80883b45a4e66c0")
+        let exp = Date(timeIntervalSince1970: 1_791_766_200) // 2026-10-12 00:50 UTC
+        XCTAssertEqual(Consent.release(school: "South Eugene High School", proofHash: hash, nonce: "0123456789abcdef", expiresAt: exp),
+                       "OBG Vault release\nSend proof to: South Eugene High School\nProof: e642f79bebe73ab6e80883b45a4e66c0\nRequest: 01234567\nExpires: 2026-10-12 00:50 UTC")
+        XCTAssertEqual(Consent.request(school: "South Eugene High School", student: "Jordan Rivera", requirementSet: "oregon-k12-2026", nonce: "0123456789abcdef"),
+                       "OBG Vault request\nFrom: South Eugene High School\nStudent: Jordan Rivera\nProve: oregon-k12-2026\nRequest: 01234567")
+        XCTAssertEqual(Consent.iso(exp), "2026-10-12T00:50:00Z")
     }
 
-    func testConsentIsPlainASCII() async throws {
-        let (p, _, _) = try await makePresentation()
-        XCTAssertTrue(p.consentText.unicodeScalars.allSatisfy { $0.isASCII && ($0.value >= 0x20 || $0 == "\n") }, p.consentText)
+    func testExpiryIsWholeMinutes() {
+        let e = Consent.expiry(from: Date(timeIntervalSince1970: 1_000_000_037), minutes: 15)
+        XCTAssertEqual(e.timeIntervalSince1970.truncatingRemainder(dividingBy: 60), 0)
+        XCTAssertEqual(e.timeIntervalSince1970, 1_000_000_020 + 900)
     }
 
-    func testTamperedClaimFails() async throws {
-        var (p, issuer, engine) = try await makePresentation()
-        p = Presentation(context: p.context, engine: p.engine, issuer: p.issuer, issuerPublicKey: p.issuerPublicKey, holder: p.holder,
-                         validUntil: p.validUntil, digests: p.digests, issuerSignature: p.issuerSignature,
-                         revealed: [Disclosure(claim: .covid19UpToDate, value: !p.revealed[0].value, salt: p.revealed[0].salt)],
-                         consentText: p.consentText, ledgerSignature: p.ledgerSignature)
-        XCTAssertFalse(Verifier.verify(p, trustedIssuerKey: issuer.publicKey, engine: engine).ok)
+    func testSampleRecordMeetsOregonK12() {
+        XCTAssertTrue(ImmunizationRecord.sample.meets(.oregonK12))
+        XCTAssertEqual(ImmunizationRecord.sample.doseCounts, [5, 4, 2, 2, 3, 2, 1])
     }
 
-    func testUntrustedIssuerFails() async throws {
-        let (p, _, engine) = try await makePresentation()
-        XCTAssertFalse(Verifier.verify(p, trustedIssuerKey: Issuer.make().publicKey, engine: engine).ok)
-    }
-
-    func testSignatureFromOtherKeyFails() async throws {
-        var (p, issuer, engine) = try await makePresentation()
-        p.ledgerSignature = try Ethereum.signPersonalMessage(p.consentText, privateKey: Data((1...32).map { UInt8($0) }))
-        XCTAssertFalse(Verifier.verify(p, trustedIssuerKey: issuer.publicKey, engine: engine).ok)
-    }
-
-    private func makePresentation() async throws -> (Presentation, Issuer, ProofEngine) {
+    func testSimulatedLedgerSignatureRecovers() async throws {
         let ledger = SimulatedLedger()
-        let issuer = Issuer.make()
-        let engine = SaltedHashEngine()
-        let credential = try engine.issue(record: .sample, holder: try await ledger.address(), issuer: issuer)
-        let ctx = PresentationContext(requestID: "r1", verifier: "McDonald Theatre", nonce: "n", expiresAt: .now.addingTimeInterval(300))
-        var p = try engine.present(credential, reveal: [.covid19UpToDate], context: ctx)
-        p.consentText = Consent.text(for: p)
-        p.ledgerSignature = try await ledger.signPersonalMessage(p.consentText)
-        return (p, issuer, engine)
+        let message = Consent.registration(name: "A", requirementSet: "r", proofHash: "ff")
+        let sig = try await ledger.signPersonalMessage(message)
+        let address = try await ledger.address()
+        XCTAssertEqual(Ethereum.recoverAddress(message: message, signature: sig), address)
     }
 }

@@ -4,6 +4,9 @@
 #   Device screen: http://localhost:5005  (click or hold the buttons there)
 set -euo pipefail
 MODEL="${MODEL:-flex}"            # flex | stax | nanox | nanosp | apex_p (nanosp file is named nanos2)
+NAME="${NAME:-speculos}"          # container name; run a second one for the school
+PORT="${PORT:-5005}"              # REST API / device screen port
+SEED="${SEED:-}"                  # BIP39 mnemonic; empty = Speculos default (the student)
 ETH_APP_VERSION="${ETH_APP_VERSION:-1.22.3}"
 DIR="$(cd "$(dirname "$0")/.." && pwd)/speculos/apps"
 FILE="eth-$MODEL-$ETH_APP_VERSION.elf"
@@ -16,9 +19,9 @@ if [ ! -f "$DIR/$FILE" ]; then
     "https://github.com/LedgerHQ/app-ethereum/releases/download/$ETH_APP_VERSION/app-$ETH_APP_VERSION-$ASSET_MODEL.elf"
 fi
 
-docker rm -f speculos >/dev/null 2>&1 || true
-# Port 5000 is taken by AirPlay on macOS, so the API is exposed on 5005.
-docker run -d --name speculos -p 5005:5000 -p 9999:9999 -v "$DIR:/apps" \
+docker rm -f "$NAME" >/dev/null 2>&1 || true
+# Port 5000 is taken by AirPlay on macOS, so the API is exposed on 5005 by default.
+docker run -d --name "$NAME" -p "$PORT:5000" -v "$DIR:/apps" \
   ghcr.io/ledgerhq/speculos:latest \
-  --model "$MODEL" --display headless --api-port 5000 --apdu-port 9999 "/apps/$FILE" >/dev/null
-echo "Speculos ($MODEL) running. Device screen: http://localhost:5005"
+  --model "$MODEL" --display headless --api-port 5000 --apdu-port 9999 ${SEED:+--seed "$SEED"} "/apps/$FILE" >/dev/null
+echo "Speculos ($NAME, $MODEL) running. Device screen: http://localhost:$PORT"

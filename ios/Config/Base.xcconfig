@@ -1,0 +1,13 @@
+// Shared settings. Secrets and your Mac's LAN address live in Secrets.xcconfig
+// (gitignored); copy Secrets.example.xcconfig to create it.
+SUPABASE_PROJECT_REF = oxwzyssypbyfizssxvsd
+
+// The web app (school portal + prover) and the student's emulated Ledger run on
+// the Mac. The simulator reaches them at localhost; a real iPhone needs the
+// Mac's Wi-Fi address (MAC_LAN_HOST in Secrets.xcconfig).
+MAC_LAN_HOST = localhost
+#include? "Secrets.xcconfig"
+PROVER_HOST = localhost:3000
+PROVER_HOST[sdk=iphoneos*] = $(MAC_LAN_HOST):3000
+SPECULOS_HOST = localhost:5005
+SPECULOS_HOST[sdk=iphoneos*] = $(MAC_LAN_HOST):5005

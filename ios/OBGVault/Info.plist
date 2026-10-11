@@ -25,6 +25,16 @@
 		<key>NSAllowsLocalNetworking</key>
 		<true/>
 	</dict>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>Connects to the prover and the Ledger emulator running on your Mac.</string>
+	<key>ProverHost</key>
+	<string>$(PROVER_HOST)</string>
+	<key>SpeculosHost</key>
+	<string>$(SPECULOS_HOST)</string>
+	<key>SupabaseAnonKey</key>
+	<string>$(SUPABASE_ANON_KEY)</string>
+	<key>SupabaseProjectRef</key>
+	<string>$(SUPABASE_PROJECT_REF)</string>
 	<key>UILaunchScreen</key>
 	<dict/>
 	<key>UISupportedInterfaceOrientations</key>

@@ -69,7 +69,7 @@ enum EthereumAPDU {
 /// Ledger's official emulator (Speculos), reached over its REST API.
 /// Start it with `npm run speculos` / `scripts/speculos.sh` at the repo root.
 struct SpeculosLedger: LedgerSigner {
-    var baseURL = URL(string: "http://localhost:5005")!
+    var baseURL = AppConfig.speculosURL
     var displayName: String { "Ledger Flex · emulator" }
 
     func address() async throws -> String {

@@ -11,3 +11,9 @@ build/
 
 # local tool logs
 .gstack/
+
+# iOS secrets
+ios/Config/Secrets.xcconfig
+
+# Supabase CLI
+supabase/.temp/

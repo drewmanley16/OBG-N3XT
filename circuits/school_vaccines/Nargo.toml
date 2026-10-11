@@ -1,0 +1,6 @@
+[package]
+name = "school_vaccines"
+type = "bin"
+authors = ["OBG"]
+
+[dependencies]

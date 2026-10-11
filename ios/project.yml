@@ -10,6 +10,9 @@ packages:
   CryptoSwift:
     url: https://github.com/krzyzanowskim/CryptoSwift
     from: 1.8.0
+  Supabase:
+    url: https://github.com/supabase/supabase-swift
+    from: 2.0.0
 settings:
   base:
     SWIFT_VERSION: "6.0"
@@ -20,18 +23,32 @@ targets:
     type: application
     platform: iOS
     sources: [OBGVault]
+    configFiles:
+      Debug: Config/Base.xcconfig
+      Release: Config/Base.xcconfig
+    settings:
+      base:
+        DEVELOPMENT_TEAM: X9H68STU8F
+        CODE_SIGN_STYLE: Automatic
     dependencies:
       - package: P256K
         product: P256K
       - package: CryptoSwift
+      - package: Supabase
+        product: Supabase
     info:
       path: OBGVault/Info.plist
       properties:
         CFBundleDisplayName: OBG Vault
         UILaunchScreen: {}
         UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
+        SupabaseProjectRef: $(SUPABASE_PROJECT_REF)
+        SupabaseAnonKey: $(SUPABASE_ANON_KEY)
+        ProverHost: $(PROVER_HOST)
+        SpeculosHost: $(SPECULOS_HOST)
+        NSLocalNetworkUsageDescription: Connects to the prover and the Ledger emulator running on your Mac.
         NSAppTransportSecurity:
-          NSAllowsLocalNetworking: true # talk to the Speculos emulator on localhost
+          NSAllowsLocalNetworking: true # Speculos emulator and the prover on localhost
   OBGVaultTests:
     type: bundle.unit-test
     platform: iOS

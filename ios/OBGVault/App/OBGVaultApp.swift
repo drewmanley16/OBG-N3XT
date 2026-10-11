@@ -2,19 +2,19 @@ import SwiftUI
 
 @main
 struct OBGVaultApp: App {
-    @State private var store = VaultStore()
+    @State private var model = AppModel()
+
+    init() { Notifications.shared.setUp() }
 
     var body: some Scene {
         WindowGroup {
-            TabView {
-                WalletView()
-                    .tabItem { Label("Wallet", systemImage: "wallet.pass") }
-                ProviderView()
-                    .tabItem { Label("Provider", systemImage: "stethoscope") }
+            Group {
+                if model.registration == nil { OnboardingView() } else { HomeView() }
             }
-            .environment(store)
+            .environment(model)
             .tint(Theme.accent)
             .preferredColorScheme(.dark)
+            .task { model.startListening() }
         }
     }
 }
