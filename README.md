@@ -81,3 +81,21 @@ On a real iPhone, put your Mac's Wi-Fi IP in `MAC_LAN_HOST` in `Secrets.xcconfig
 - [ ] Slides (max 2 presenters)
 - [ ] Club account posts on X/LinkedIn tagging @Ledger with #LedgerN3XTCollab
 - [ ] Finalists announced Oct 15; pitch Oct 16, 3 p.m. Paris
+
+## To do
+
+**Must have before submitting**
+- [ ] AI piece (the brief asks for an AI agent or AI-powered product). Idea: an agent reads the raw Epic export, maps it to the Oregon requirements, and drafts the disclosure for the student to approve on their Ledger
+- [ ] Get the app on a real iPhone: accept the updated Apple Program License Agreement at developer.apple.com/account (or use Personal Team in Xcode), then run on device
+- [ ] Record the demo video end to end (onboarding, school request, notification, Ledger approval, Compliant)
+- [ ] Move the repo out of iCloud-synced `~/Documents` (iCloud evicts `.git` files and breaks git)
+
+**Nice to have**
+- [ ] Use a real Ledger over Bluetooth or USB instead of the Speculos emulators
+- [ ] Prove on the device (or at the provider) so our server never sees dose counts
+- [ ] Real APNs push instead of Realtime plus local notifications
+- [ ] Lock down Supabase row-level security
+- [ ] Fresh proof per school so schools can't link releases to one student
+- [ ] Clear-signing descriptor (ERC-7730) so we can use EIP-712 typed data instead of plain text
+- [ ] Deploy the school portal and prover (e.g. Vercel) so the demo doesn't need the Mac on the same Wi-Fi
+- [ ] More requirement sets (other states, college entry)
