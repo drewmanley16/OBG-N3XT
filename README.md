@@ -88,7 +88,7 @@ On the emulator screens, page through with **›** and hold **Hold to sign**. Th
 To run on a real iPhone:
 - Set `MAC_LAN_HOST` in `Secrets.xcconfig` to the Mac's Wi-Fi IP (`ipconfig getifaddr en0`).
 - Keep the phone and the Mac on the same Wi-Fi.
-- Keep the repo out of iCloud-synced folders.
+- Keep the repo away of iCloud-synced folders.
 
 **Tests:**
 - `cd circuits/school_vaccines && nargo test`
