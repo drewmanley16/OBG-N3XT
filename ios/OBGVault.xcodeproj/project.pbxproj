@@ -51,15 +51,15 @@
 		2A07821AE0E8CDFC529D5A66 /* Ethereum.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Ethereum.swift; sourceTree = "<group>"; };
 		32739238081E45512F5F8251 /* CryptoTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CryptoTests.swift; sourceTree = "<group>"; };
 		44D2E2FA0B909DA594880532 /* AppModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModel.swift; sourceTree = "<group>"; };
-		525DAB1226016AF8212A69C5 /* OBGVaultTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = OBGVaultTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		525DAB1226016AF8212A69C5 /* OBGVaultTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = OBGVaultTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		57B2694AFD23A8551CBE92A6 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
 		5B96A3912F22179B0BE1EA1A /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
-		7E0423E1FD581D3B82278606 /* OBGVaultUITests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = OBGVaultUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		7E0423E1FD581D3B82278606 /* OBGVaultUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = OBGVaultUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		82920359455AE2F63CF31C85 /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
 		85EC1E89BBA430472AB70C21 /* SpeculosTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeculosTests.swift; sourceTree = "<group>"; };
 		91039CFFB997D5C5600A7306 /* AppConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppConfig.swift; sourceTree = "<group>"; };
 		AB6D003EFA124095CF117941 /* LedgerSigner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LedgerSigner.swift; sourceTree = "<group>"; };
-		B24708AA6F354BC1E2F86F8F /* OBGVault.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = OBGVault.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		B24708AA6F354BC1E2F86F8F /* OBGVault.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = OBGVault.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		C5143EBEDE27119028706C4C /* DemoFlowUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DemoFlowUITests.swift; sourceTree = "<group>"; };
 		F54ADD16FE5347815D4A7E11 /* Notifications.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Notifications.swift; sourceTree = "<group>"; };
 		F6698846B1B2C260A4D2D7DC /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
@@ -270,10 +270,9 @@
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = YES;
-				LastUpgradeCheck = 1430;
+				LastUpgradeCheck = 2630;
 				TargetAttributes = {
 					1903DC867457C128F9A70F98 = {
-						DevelopmentTeam = X9H68STU8F;
 						ProvisioningStyle = Automatic;
 					};
 					5C968D5B5728D6943AE4CB29 = {
@@ -434,6 +433,7 @@
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
 				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
@@ -448,6 +448,7 @@
 				MTL_FAST_MATH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_COMPILATION_MODE = wholemodule;
 				SWIFT_OPTIMIZATION_LEVEL = "-O";
 				SWIFT_VERSION = 6.0;
@@ -562,6 +563,7 @@
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_NO_COMMON_BLOCKS = YES;
@@ -583,6 +585,7 @@
 				ONLY_ACTIVE_ARCH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 6.0;
