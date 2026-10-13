@@ -93,7 +93,7 @@ On a real iPhone, put your Mac's Wi-Fi IP (`ipconfig getifaddr en0`) in `MAC_LAN
 - [x] AI piece: Claude reviews the raw Epic export, maps it to the Oregon requirements, and drafts the disclosure the student approves on their Ledger
 - [x] App signed and installed on a real iPhone (team signing works; the phone reaches the Mac over Wi-Fi)
 - [x] Repo moved out of iCloud-synced `~/Documents` (iCloud was evicting files)
-- [ ] Full run-through on the iPhone: onboarding with AI review, school request, notification, Ledger approval, Compliant
+- [x] Full run-through on the iPhone: onboarding with AI review, school request, notification, Ledger approval, Compliant
 - [ ] Record the demo video end to end
 - [ ] Slides, club post tagging @Ledger, submit by Oct 13, 2:59 p.m. PT
 
