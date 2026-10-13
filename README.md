@@ -105,5 +105,8 @@ To run on a real iPhone:
 
 ## Next
 
-- **Circuit:** `cd circuits/school_vaccines && nargo test`
-- **iOS:** `CryptoTests` covers signature recovery against a real emulator signature, Ledger message chunking, and message strings byte-for-byte identical to the web verifier. `SpeculosTests` and `DemoFlowUITests` drive the emulators and need the stack running.
+- Prove on the device, and connect a real Ledger over Bluetooth.
+- Import real Epic FHIR records.
+- Generate a fresh proof per school, so releases can't be linked.
+- Show approvals with ERC-7730 clear signing instead of plain text.
+- Support more requirement sets: other states and college entry.
