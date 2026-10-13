@@ -42,10 +42,14 @@ final class AppModel {
         try await ledger.address()
     }
 
-    /// Simulated Epic (MyChart) import for the demo.
-    func importFromEpic() async throws -> ImmunizationRecord {
-        try await Task.sleep(for: .seconds(2.2))
-        return .sample
+    /// Epic (MyChart) import, simulated by the web app for the demo.
+    func importFromEpic() async throws -> Agent.EpicExport {
+        try await Agent.importFromEpic()
+    }
+
+    /// Claude reviews the raw export against the school requirements.
+    func review(_ export: Agent.EpicExport) async throws -> Agent.Review {
+        try await Agent.review(export)
     }
 
     func generateProof(record: ImmunizationRecord, holder: String) async throws -> Prover.Result {

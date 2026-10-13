@@ -1,17 +1,20 @@
 import SwiftUI
 
-/// Name → Ledger → Epic import → ZK proof → Ledger-signed registration.
+/// Name → Ledger → Epic import → AI review → ZK proof → Ledger-signed registration.
 struct OnboardingView: View {
     @Environment(AppModel.self) private var model
     @State private var name = "Jordan Rivera"
     @State private var address: String?
-    @State private var record: ImmunizationRecord?
+    @State private var export: Agent.EpicExport?
+    @State private var review: Agent.Review?
     @State private var proof: Prover.Result?
     @State private var busy: Step?
     @State private var error: String?
     @State private var proofSeconds: Double?
 
-    enum Step: Int { case ledger = 1, epic, proof, register }
+    enum Step: Int { case ledger = 1, epic, review, proof, register }
+
+    private var record: ImmunizationRecord? { review.map { $0.record(source: export?.source ?? "Epic") } }
 
     var body: some View {
         Screen(title: "Set up your vault", subtitle: "OBG Vault · School vaccines") {
@@ -28,16 +31,26 @@ struct OnboardingView: View {
                     .buttonStyle(PrimaryButtonStyle())
             }
 
-            step(2, "Import records from Epic", done: record.map { "\($0.doses.count) doses · \($0.source)" },
-                 active: address != nil && record == nil) {
+            step(2, "Import records from Epic", done: export.map { "\($0.entries.count) entries · \($0.source)" },
+                 active: address != nil && export == nil) {
                 Text("Sign in to MyChart to pull your immunization history. (Simulated for the demo.)")
                     .font(.caption).foregroundStyle(Theme.muted)
-                Button(busy == .epic ? "Importing from Epic…" : "Connect Epic MyChart") { run(.epic) { record = try await model.importFromEpic() } }
+                Button(busy == .epic ? "Importing from Epic…" : "Connect Epic MyChart") { run(.epic) { export = try await model.importFromEpic() } }
                     .buttonStyle(PrimaryButtonStyle())
             }
-            if let record, proof == nil { RecordList(record: record) }
 
-            step(3, "Generate zero-knowledge proof",
+            step(3, "Review with AI", done: review.map { "\($0.doses.count) doses count · \($0.excluded.count) set aside" },
+                 active: export != nil && review == nil) {
+                Text("Claude reads the raw export, checks it against \(Requirement.oregonK12.label) rules, and drafts what your school will see. Nothing is shared yet.")
+                    .font(.caption).foregroundStyle(Theme.muted)
+                if busy == .review { AgentWorking() }
+                Button(busy == .review ? "Reviewing…" : "Review with AI") { run(.review) { review = try await model.review(export!) } }
+                    .buttonStyle(PrimaryButtonStyle())
+                    .disabled(busy != nil)
+            }
+            if let review, let export, proof == nil { ReviewView(review: review, export: export) }
+
+            step(4, "Generate zero-knowledge proof",
                  done: proof.map { p in "\(p.proof.count / 2 / 1024) KB proof\(proofSeconds.map { String(format: " · %.1fs", $0) } ?? "")" },
                  active: record != nil && proof == nil) {
                 Text("Proves your record meets \(Requirement.oregonK12.label) requirements. The proof reveals no dates or counts.")
@@ -52,7 +65,8 @@ struct OnboardingView: View {
                 .buttonStyle(PrimaryButtonStyle())
             }
 
-            step(4, "Register on your Ledger", done: nil, active: proof != nil) {
+            step(5, "Register on your Ledger", done: nil, active: proof != nil) {
+                if let review { DisclosureView(disclosure: review.disclosure) }
                 if let proof {
                     Text("Your Ledger signs the proof hash. Supabase stores only your name, that hash and your Ledger address.")
                         .font(.caption).foregroundStyle(Theme.muted)
@@ -120,6 +134,90 @@ struct RecordList: View {
                         .font(Theme.mono(11)).foregroundStyle(Theme.faint)
                 }
             }
+        }
+    }
+}
+
+/// What the AI decided, so the student can check it before anything is proven.
+struct ReviewView: View {
+    let review: Agent.Review
+    let export: Agent.EpicExport
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Eyebrow("AI review", trailing: review.model)
+            Card(padding: 14) {
+                Text(review.summary).font(.system(size: 15)).foregroundStyle(Theme.text)
+                if !review.meetsRequirements {
+                    Text("Your record doesn't meet the requirements yet, so no proof can be made.")
+                        .font(.footnote.weight(.semibold)).foregroundStyle(Theme.warn)
+                }
+            }
+            Card(padding: 14) {
+                ForEach(review.vaccines, id: \.vaccine) { v in
+                    HStack(alignment: .top, spacing: 10) {
+                        Check(ok: v.met)
+                        VStack(alignment: .leading, spacing: 2) {
+                            HStack {
+                                Text(v.vaccine.rawValue).font(.system(size: 15, weight: .semibold)).foregroundStyle(Theme.text)
+                                Spacer()
+                                Text("\(v.validDoses)/\(v.required)").font(Theme.mono(12, .bold)).foregroundStyle(v.met ? Theme.accent : Theme.danger)
+                            }
+                            Text(v.note).font(.caption).foregroundStyle(Theme.muted)
+                        }
+                    }
+                }
+            }
+            if !review.excluded.isEmpty {
+                Eyebrow("Set aside", trailing: "\(review.excluded.count) entries")
+                Card(padding: 14) {
+                    ForEach(review.excluded, id: \.sourceId) { x in
+                        VStack(alignment: .leading, spacing: 2) {
+                            if let entry = export.entry(x.sourceId) {
+                                Text("\(entry.vaccineCode.text) · \(entry.occurrenceDate)")
+                                    .font(Theme.mono(11, .semibold)).foregroundStyle(Theme.faint)
+                            }
+                            Text(x.reason).font(.caption).foregroundStyle(Theme.muted)
+                        }
+                    }
+                }
+            }
+            DisclosureView(disclosure: review.disclosure)
+        }
+    }
+}
+
+/// The minimal disclosure the AI drafted, which the Ledger approves at registration.
+struct DisclosureView: View {
+    let disclosure: Agent.Review.Disclosure
+
+    var body: some View {
+        Card(padding: 14) {
+            Eyebrow("Your school sees")
+            ForEach(disclosure.schoolSees, id: \.self) { line(Image(systemName: "eye"), $0, Theme.accent) }
+            Eyebrow("Stays on your phone")
+            ForEach(disclosure.keptPrivate, id: \.self) { line(Image(systemName: "lock"), $0, Theme.muted) }
+        }
+    }
+
+    private func line(_ icon: Image, _ text: String, _ color: Color) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 8) {
+            icon.font(.system(size: 11, weight: .semibold)).foregroundStyle(color).frame(width: 16)
+            Text(text).font(.footnote).foregroundStyle(Theme.text)
+        }
+    }
+}
+
+struct AgentWorking: View {
+    var body: some View {
+        HStack(spacing: 12) {
+            ProgressView().tint(Theme.accent)
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Claude is reviewing your record").font(.system(size: 15, weight: .bold)).foregroundStyle(Theme.text)
+                Text("Combos, duplicates, age rules").font(.caption).foregroundStyle(Theme.muted)
+            }
+            Spacer()
+            Pill(text: "AI", pulsing: true)
         }
     }
 }

@@ -17,7 +17,9 @@ final class DemoFlowUITests: XCTestCase {
 
         tap(app.buttons["Connect Ledger"], app)
         tap(app.buttons["Connect Epic MyChart"], app)
-        tap(app.buttons["Generate proof"], app, timeout: 30)
+        tap(app.buttons["Review with AI"], app, timeout: 30)
+        shot(app, "1-ai-review")
+        tap(app.buttons["Generate proof"], app, timeout: 120)
         shot(app, "1-onboarding-proof")
         tap(app.buttons["Sign & register"], app, timeout: 30)
         shot(app, "2-onboarding-signing")

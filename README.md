@@ -11,12 +11,16 @@ Based on Drew Manley's paper *A Blueprint for Patient-Held Medical Credentials: 
  ┌──────────────────────────────────────────┐          School portal (web)
  │ 1 Connect Ledger                          │            │ signs request on SCHOOL's Ledger
  │ 2 Import records from Epic (simulated)    │            ▼
- │ 3 ZK proof: "meets Oregon K-12" (Noir)    │          Supabase ──Realtime──► iPhone notification
- │ 4 Ledger signs the proof hash             │                                  │ checks school's signature
+ │ 3 AI review: Claude maps the raw export   │          Supabase ──Realtime──► iPhone notification
+ │   to Oregon rules, drafts the disclosure  │                                  │ checks school's signature
+ │ 4 ZK proof: "meets Oregon K-12" (Noir)    │                                  │
+ │ 5 Ledger signs the proof hash             │                                  │
  └───────────────┬──────────────────────────┘                                  │ student approves on THEIR Ledger
                  ▼                                                              ▼
  Supabase students: name · proof hash · Ledger address · signature     proof + release signature ──► School verifies 8 checks
 ```
+
+**The AI agent** (`web/src/lib/agent.ts`, Claude Opus 5.5): real immunization exports are messy. The sample export has combination shots (Pediarix, Kinrix, ProQuad), an MMR given before the first birthday, a duplicate Hep A synced from another clinic, an entered-in-error Tdap, and flu, COVID-19, HPV and MenACWY shots schools don't require. Claude works out which doses count, explains each decision in plain language, and drafts the minimal disclosure: what the school sees and what stays on the phone. The AI proposes and the hardware approves: every dose it counts is checked in code against the source entry (it exists, is completed, covers that vaccine on that date), the circuit enforces the counts, and the student approves the registration on their Ledger.
 
 **What the school verifies** (`web/src/app/api/verify`):
 1. The ZK proof is valid (UltraHonk, Barretenberg).
@@ -35,7 +39,7 @@ Based on Drew Manley's paper *A Blueprint for Patient-Held Medical Credentials: 
 | Path | What |
 |---|---|
 | `circuits/school_vaccines` | Noir circuit. Private: dose counts and a salt. Public: minimum doses and the holder's Ledger address. Returns a commitment. `nargo test` passes 3 tests. |
-| `web/` | Next.js. The **school portal** (`/`), **prover** (`/api/prove`) and **verifier** (`/api/verify`). The school signs requests on its Ledger through Ledger's Device Management Kit. |
+| `web/` | Next.js. The **school portal** (`/`), **AI review** (`/api/agent`), simulated **Epic export** (`/api/epic`), **prover** (`/api/prove`) and **verifier** (`/api/verify`). The school signs requests on its Ledger through Ledger's Device Management Kit. |
 | `ios/` | SwiftUI student app: onboarding, Supabase Realtime requests, local notifications, and Ledger signing via raw Ethereum-app commands to the emulator. |
 | `supabase/migrations` | `students`, `schools`, `proof_requests`. Realtime is enabled on requests. RLS is wide open for the demo. |
 | `scripts/speculos*.sh` | Ledger's official emulator: the student's Ledger on :5005 and the school's on :5006 (different seeds). |
@@ -47,7 +51,7 @@ Requirements: Docker, Node 22+, Xcode 26.
 ```bash
 scripts/speculos.sh && scripts/speculos-school.sh     # two emulated Ledgers
 cd web && cp .env.example .env.local                   # add the Supabase anon key
-npm install && npm run dev                             # school portal + prover on :3000
+npm install && npm run dev                             # school portal + prover + AI review on :3000 (needs ANTHROPIC_API_KEY)
 cp ios/Config/Secrets.example.xcconfig ios/Config/Secrets.xcconfig   # anon key
 open ios/OBGVault.xcodeproj                            # "Trust & Enable" the secp256k1 plugin
 ```
@@ -64,6 +68,7 @@ On a real iPhone, put your Mac's Wi-Fi IP in `MAC_LAN_HOST` in `Secrets.xcconfig
 ## Honest limits
 
 - The Epic import is simulated (sample records).
+- The AI review runs on our server with Claude, so the export leaves the phone for that step. In production it would run at the provider or under a zero-retention agreement.
 - The prover runs on our server, so it sees the dose counts. In production, proving would happen on the device or at the provider.
 - Each school receives the same proof, so schools that compare notes can link it to one student. Every release is still a separate Ledger approval tied to that school and request, and it expires.
 - Realtime plus local notifications stand in for APNs push.
@@ -85,7 +90,7 @@ On a real iPhone, put your Mac's Wi-Fi IP in `MAC_LAN_HOST` in `Secrets.xcconfig
 ## To do
 
 **Must have before submitting**
-- [ ] AI piece (the brief asks for an AI agent or AI-powered product). Idea: an agent reads the raw Epic export, maps it to the Oregon requirements, and drafts the disclosure for the student to approve on their Ledger
+- [x] AI piece: Claude reviews the raw Epic export, maps it to the Oregon requirements, and drafts the disclosure the student approves on their Ledger
 - [ ] Get the app on a real iPhone: accept the updated Apple Program License Agreement at developer.apple.com/account (or use Personal Team in Xcode), then run on device
 - [ ] Record the demo video end to end (onboarding, school request, notification, Ledger approval, Compliant)
 - [ ] Move the repo out of iCloud-synced `~/Documents` (iCloud evicts `.git` files and breaks git)
