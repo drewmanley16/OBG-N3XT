@@ -56,14 +56,14 @@ cp ios/Config/Secrets.example.xcconfig ios/Config/Secrets.xcconfig   # anon key
 open ios/OBGVault.xcodeproj                            # "Trust & Enable" the secp256k1 plugin
 ```
 
-1. **iPhone app:** Connect Ledger → Connect Epic MyChart → Generate proof → Sign & register. Approve on the student device at http://localhost:5005.
+1. **iPhone app:** Connect Ledger → Connect Epic MyChart → Review with AI (check what counts and what the school will see) → Generate proof → Sign & register. Approve on the student device at http://localhost:5005.
 2. **Portal** (http://localhost:3000): Request proof next to the student. Approve on the school device at http://localhost:5006.
 3. **iPhone:** a notification arrives. Tap **Approve on Ledger** and sign on :5005.
 4. **Portal:** **Compliant**, with all 8 checks.
 
 On the emulator screens, page through with **›** and hold **Hold to sign**. In the app, the **Simulated** Ledger mode needs no Docker.
 
-On a real iPhone, put your Mac's Wi-Fi IP in `MAC_LAN_HOST` in `Secrets.xcconfig`, sign into Xcode with the team account, and run on the device.
+On a real iPhone, put your Mac's Wi-Fi IP (`ipconfig getifaddr en0`) in `MAC_LAN_HOST` in `Secrets.xcconfig`, keep the phone on the same Wi-Fi, and run on the device with the team account. If the Mac's network changes, update the IP and rebuild. Keep the repo outside iCloud-synced folders (iCloud evicts files and breaks git).
 
 ## Honest limits
 
@@ -91,9 +91,11 @@ On a real iPhone, put your Mac's Wi-Fi IP in `MAC_LAN_HOST` in `Secrets.xcconfig
 
 **Must have before submitting**
 - [x] AI piece: Claude reviews the raw Epic export, maps it to the Oregon requirements, and drafts the disclosure the student approves on their Ledger
-- [ ] Get the app on a real iPhone: accept the updated Apple Program License Agreement at developer.apple.com/account (or use Personal Team in Xcode), then run on device
-- [ ] Record the demo video end to end (onboarding, school request, notification, Ledger approval, Compliant)
-- [ ] Move the repo out of iCloud-synced `~/Documents` (iCloud evicts `.git` files and breaks git)
+- [x] App signed and installed on a real iPhone (team signing works; the phone reaches the Mac over Wi-Fi)
+- [x] Repo moved out of iCloud-synced `~/Documents` (iCloud was evicting files)
+- [ ] Full run-through on the iPhone: onboarding with AI review, school request, notification, Ledger approval, Compliant
+- [ ] Record the demo video end to end
+- [ ] Slides, club post tagging @Ledger, submit by Oct 13, 2:59 p.m. PT
 
 **Nice to have**
 - [ ] Use a real Ledger over Bluetooth or USB instead of the Speculos emulators
